@@ -1,0 +1,66 @@
+version: '3'
+services:
+  db:
+    image: mysql:5.7.36
+    container_name: "mysql_livewire-pactice"
+    environment:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_DATABASE: laravel-livewire-pactice
+        MYSQL_USER: admin
+        MYSQL_PASSWORD: secret
+        TZ: 'Asia/Tokyo'
+    # ポートフォワードの指定（ホスト側ポート：コンテナ側ポート）
+    ports:
+        - 3306:3306
+    # コマンドの指定
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    # 名前付きボリュームを設定する（名前付きボリューム:コンテナ側ボリュームの場所）
+    volumes:
+      - livewire-pactice_db:/var/lib/mysql
+      - db_my.cnf_livewire-pactice:/etc/mysql/conf.d/my.cnf
+      - db_sql_livewire-pactice:/docker-entrypoint-initdb.d
+
+  php:
+    build: ./docker/php
+    container_name: "php-fpm_livewire-pactice"
+    # ボリュームを設定する（ホスト側ディレクトリ:コンテナ側ボリュームの場所）
+    volumes:
+      - ./src:/var/www/html
+
+  nginx:
+    image: nginx:latest
+    container_name: "nginx_livewire-pactice"
+    # ポートフォワードの指定（ホスト側ポート：コンテナ側ポート）
+    ports:
+      - 80:80
+    # ボリュームを設定する（ホスト側ディレクトリ:コンテナ側ボリュームの場所）
+    volumes:
+      - ./src:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    # サービスの依存関係を指定（nginxをphpに依存させる）
+    depends_on:
+      - php
+      
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: "phpmyadmin_livewire-pactice"
+    environment:
+      - PMA_ARBITRARY=1 # サーバ設定：サーバーをローカル以外も指定
+      - PMA_HOST=db # ホスト設定：dbを指定
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    # db（サービス名）とのリンクを設定する
+    links:
+      - db
+    # ポートフォワードの指定（ホスト側ポート：コンテナ側ポート）
+    ports:
+      - 8080:80
+    # ボリュームを設定する（ホスト側ディレクトリ:コンテナ側ボリュームの場所）
+    volumes:
+      - ./phpmyadmin/sessions:/sessions
+
+# サービスレベルで名前付きボリュームを命名する
+volumes:
+  livewire-pactice_db:
+  db_my.cnf_livewire-pactice:
+  db_sql_livewire-pactice:
